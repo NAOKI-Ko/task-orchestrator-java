@@ -29,7 +29,7 @@ dependencies {
     api("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.assertj:assertj-core:3.27.4")
+    testImplementation("org.assertj:assertj-core:3.27.7")
     testImplementation("net.jqwik:jqwik:1.9.3")
     testImplementation("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:$openTelemetryVersion")
