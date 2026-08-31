@@ -55,7 +55,8 @@ cd task-orchestrator-java
 ./gradlew build
 ```
 
-The library JAR is produced under `build/libs/`.
+The library JAR is produced under `build/libs/`. Binary, sources, and Javadoc JARs for a signed-off
+version are also attached to its [GitHub Release](https://github.com/NAOKI-Ko/task-orchestrator-java/releases/tag/v0.1.0).
 
 ## Quick start
 
@@ -101,7 +102,8 @@ They demonstrate durable events, bounded retries, and virtual-thread parallelism
 ```
 
 The suite includes unit, integration, parallelism, retry, timeout, cancellation, persistence,
-failure-propagation and jqwik property tests. JaCoCo checks line coverage and fails below 90%.
+failure-propagation and jqwik property tests. JaCoCo checks both line and branch coverage and fails
+if either falls below 90%.
 Compilation enables all lint warnings and treats them as errors.
 
 ## Benchmark
@@ -123,9 +125,9 @@ machine-specific and are intentionally not claimed in this README.
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Report vulnerabilities through
-the private process in [SECURITY.md](SECURITY.md).
+the private process in [SECURITY.md](SECURITY.md). Maintainers should follow the reproducible
+[release process](docs/releasing.md).
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
