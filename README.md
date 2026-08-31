@@ -73,18 +73,23 @@ version are also attached to its [GitHub Release](https://github.com/NAOKI-Ko/ta
 ## Quick start
 
 ```java
-var fetch = JobDefinition.of(new JobId("fetch"), context -> "payload");
-var index = new JobDefinition<>(
-    new JobId("index"), Set.of(fetch.id()), 10, Duration.ofSeconds(5),
-    RetryPolicy.none(), context -> "indexed");
+var workflow = WorkflowBuilder.create()
+    .job("fetch", context -> "payload").done()
+    .job("index", context -> "indexed")
+        .dependsOn("fetch")
+        .priority(10)
+        .timeout(Duration.ofSeconds(5))
+        .done()
+    .build();
 
 try (var engine = new WorkflowEngine(8, EventSink.noop(), Metrics.noop())) {
-    WorkflowResult result = engine
-        .execute(new WorkflowDefinition(List.of(fetch, index)))
-        .join();
+    WorkflowResult result = engine.execute(workflow).join();
     System.out.println(result.succeeded());
 }
 ```
+
+The fluent builder preserves generic job actions and existing domain defaults while producing the
+same immutable `WorkflowDefinition` accepted by the constructor-based API.
 
 ## Execution semantics
 
@@ -137,8 +142,8 @@ capacity you need to protect, not around the number of virtual threads the JVM c
 
 | Area | Primary APIs |
 | --- | --- |
-| Workflow definition | `WorkflowDefinition`, `WorkflowDefinition.ExecutionPlan` |
-| Job definition | `JobDefinition<T>`, `JobId`, `JobAction<T>`, `JobContext` |
+| Workflow definition | `WorkflowBuilder`, `WorkflowDefinition`, `WorkflowDefinition.ExecutionPlan` |
+| Job definition | `JobBuilder<T>`, `JobDefinition<T>`, `JobId`, `JobAction<T>`, `JobContext` |
 | Execution | `WorkflowEngine`, `WorkflowResult`, `JobResult<T>`, `JobState` |
 | Resilience | `RetryPolicy`, `CircuitBreaker` |
 | Events | `WorkflowEvent`, `EventSink` |
@@ -147,15 +152,17 @@ capacity you need to protect, not around the number of virtual threads the JVM c
 
 ## Examples
 
-Three examples compile against the library and run through Gradle:
+Four examples compile against the library and run through Gradle:
 
 ```bash
 ./gradlew runBasicExample
 ./gradlew runRetryExample
 ./gradlew runConcurrencyExample
+./gradlew runBuilderExample
 ```
 
-They demonstrate durable events, bounded retries, and virtual-thread parallelism.
+They demonstrate durable events, bounded retries, virtual-thread parallelism, and fluent workflow
+construction.
 
 ## Operational notes
 
