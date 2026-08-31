@@ -60,6 +60,10 @@ tasks.jacocoTestCoverageVerification {
                 counter = "LINE"
                 minimum = "0.90".toBigDecimal()
             }
+            limit {
+                counter = "BRANCH"
+                minimum = "0.90".toBigDecimal()
+            }
         }
     }
 }
@@ -102,4 +106,3 @@ registerExample("runConcurrencyExample", "io.github.naokiko.orchestrator.example
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
 }
-

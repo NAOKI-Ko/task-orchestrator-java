@@ -32,6 +32,9 @@ class InfrastructureTest {
         assertThat(breaker.state()).isEqualTo(CircuitBreaker.State.CLOSED);
         assertThatThrownBy(() -> new CircuitBreaker(0, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CircuitBreaker(1, Duration.ofNanos(-1)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("configuration");
     }
 
     @Test
@@ -80,4 +83,3 @@ class InfrastructureTest {
         EventSink.noop().publish(new WorkflowEvent.WorkflowCompleted(0, Duration.ZERO, Instant.EPOCH));
     }
 }
-

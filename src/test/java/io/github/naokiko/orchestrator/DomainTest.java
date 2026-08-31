@@ -34,10 +34,16 @@ class DomainTest {
     void policyAndDefinitionRejectInvalidValues() {
         assertThatThrownBy(() -> new RetryPolicy(0, Duration.ZERO, Duration.ZERO, 1, 0))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new RetryPolicy(1, Duration.ofMillis(-1), Duration.ZERO, 1, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("delays");
         assertThatThrownBy(() -> new RetryPolicy(1, Duration.ofSeconds(2), Duration.ofSeconds(1), 1, 0))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new RetryPolicy(1, Duration.ZERO, Duration.ZERO, 0.5, 0))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new RetryPolicy(1, Duration.ZERO, Duration.ZERO, 1, -0.1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("jitter");
         assertThatThrownBy(() -> new RetryPolicy(1, Duration.ZERO, Duration.ZERO, 1, 2))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new JobDefinition<>(
@@ -51,6 +57,15 @@ class DomainTest {
         assertThatThrownBy(() -> new JobDefinition<>(
                         new JobId("zero"), Set.of(), 0, Duration.ZERO, RetryPolicy.none(), ignored -> null))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new JobDefinition<>(
+                        new JobId("negative"),
+                        Set.of(),
+                        0,
+                        Duration.ofMillis(-1),
+                        RetryPolicy.none(),
+                        ignored -> null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("timeout");
     }
 
     @Test
@@ -75,6 +90,12 @@ class DomainTest {
         assertThat(context.jobId()).isEqualTo(id);
         assertThatThrownBy(() -> new JobContext(id, 0, () -> false))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new JobContext(null, 1, () -> false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("context");
+        assertThatThrownBy(() -> new JobContext(id, 1, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("context");
         assertThatThrownBy(new JobContext(id, 1, () -> true)::throwIfCancelled)
                 .isInstanceOf(java.util.concurrent.CancellationException.class);
 
