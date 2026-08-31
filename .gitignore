@@ -1,4 +1,5 @@
 .gradle/
+.jqwik-database
 build/
 out/
 .idea/
@@ -8,4 +9,3 @@ out/
 .settings/
 .DS_Store
 *.jsonl
-
