@@ -10,6 +10,8 @@ versioning.
 - Expanded practical usage, execution semantics, failure handling, concurrency, and operational
   documentation.
 - Fluent, typed workflow and job builder APIs with immutable reusable build snapshots.
+- Composable event sinks, retry policy factories, execution summaries, and non-throwing workflow
+  validation.
 
 ## [0.1.0] - 2026-08-31
 

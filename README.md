@@ -144,25 +144,26 @@ capacity you need to protect, not around the number of virtual threads the JVM c
 | --- | --- |
 | Workflow definition | `WorkflowBuilder`, `WorkflowDefinition`, `WorkflowDefinition.ExecutionPlan` |
 | Job definition | `JobBuilder<T>`, `JobDefinition<T>`, `JobId`, `JobAction<T>`, `JobContext` |
-| Execution | `WorkflowEngine`, `WorkflowResult`, `JobResult<T>`, `JobState` |
-| Resilience | `RetryPolicy`, `CircuitBreaker` |
-| Events | `WorkflowEvent`, `EventSink` |
+| Execution | `WorkflowEngine`, `WorkflowResult`, `ExecutionSummary`, `JobResult<T>`, `JobState` |
+| Resilience | `RetryPolicies`, `RetryPolicy`, `CircuitBreaker`, `WorkflowValidator` |
+| Events | `WorkflowEvent`, `EventSink`, `EventSinks`, `CompositeEventSink`, `FilteringEventSink` |
 | Persistence | `EventStore`, `AppendOnlyEventStore` |
 | Metrics | `Metrics`, `InMemoryMetrics` |
 
 ## Examples
 
-Four examples compile against the library and run through Gradle:
+Five examples compile against the library and run through Gradle:
 
 ```bash
 ./gradlew runBasicExample
 ./gradlew runRetryExample
 ./gradlew runConcurrencyExample
 ./gradlew runBuilderExample
+./gradlew runUtilitiesExample
 ```
 
 They demonstrate durable events, bounded retries, virtual-thread parallelism, and fluent workflow
-construction.
+construction, plus composable sinks, retry factories, validation, and execution summaries.
 
 ## Operational notes
 

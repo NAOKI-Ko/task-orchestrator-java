@@ -2,7 +2,7 @@ package io.github.naokiko.orchestrator.examples;
 
 import io.github.naokiko.orchestrator.EventSink;
 import io.github.naokiko.orchestrator.Metrics;
-import io.github.naokiko.orchestrator.RetryPolicy;
+import io.github.naokiko.orchestrator.RetryPolicies;
 import io.github.naokiko.orchestrator.WorkflowBuilder;
 import io.github.naokiko.orchestrator.WorkflowEngine;
 import java.time.Duration;
@@ -20,12 +20,8 @@ public final class BuilderExample {
                     .dependsOn("fetch")
                     .priority(10)
                     .timeout(Duration.ofSeconds(5))
-                    .retry(new RetryPolicy(
-                            3,
-                            Duration.ofMillis(100),
-                            Duration.ofSeconds(2),
-                            2,
-                            0.1))
+                    .retry(RetryPolicies.exponentialWithJitter(
+                            3, Duration.ofMillis(100), Duration.ofSeconds(2), 0.1))
                     .done()
                 .job("persist", context -> "stored")
                     .dependsOn("transform")
