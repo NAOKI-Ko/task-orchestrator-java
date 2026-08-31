@@ -30,7 +30,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core:3.27.4")
-    testImplementation("net.jqwik:jqwik:1.9.3")
+    testImplementation("net.jqwik:jqwik:1.10.1")
     testImplementation("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:$openTelemetryVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
