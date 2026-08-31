@@ -8,6 +8,11 @@ public interface EventStore extends EventSink {
     @Override
     void publish(WorkflowEvent event);
 
+    /**
+     * Reads the persisted event records in append order.
+     *
+     * @return immutable snapshot of serialized event records
+     * @throws IOException when the event log cannot be read
+     */
     List<String> replay() throws IOException;
 }
-

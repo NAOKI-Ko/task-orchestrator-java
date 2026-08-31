@@ -33,10 +33,25 @@ public final class WorkflowEngine implements AutoCloseable {
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean closed = new AtomicBoolean();
 
+    /**
+     * Creates an engine with a ten-second graceful-shutdown timeout.
+     *
+     * @param concurrencyLimit maximum number of concurrently executing job actions
+     * @param events synchronous workflow event sink
+     * @param metrics workflow metrics adapter
+     */
     public WorkflowEngine(int concurrencyLimit, EventSink events, Metrics metrics) {
         this(concurrencyLimit, events, metrics, Duration.ofSeconds(10));
     }
 
+    /**
+     * Creates an engine with an explicit graceful-shutdown timeout.
+     *
+     * @param concurrencyLimit maximum number of concurrently executing job actions
+     * @param events synchronous workflow event sink
+     * @param metrics workflow metrics adapter
+     * @param shutdownTimeout maximum wait for virtual-thread termination during close
+     */
     public WorkflowEngine(int concurrencyLimit, EventSink events, Metrics metrics, Duration shutdownTimeout) {
         if (concurrencyLimit < 1 || shutdownTimeout.isZero() || shutdownTimeout.isNegative()) {
             throw new IllegalArgumentException("concurrency limit and shutdown timeout must be positive");
@@ -48,6 +63,13 @@ public final class WorkflowEngine implements AutoCloseable {
         this.shutdownTimeout = shutdownTimeout;
     }
 
+    /**
+     * Starts one workflow asynchronously.
+     *
+     * @param workflow validated workflow definition to execute
+     * @return future completed with an exhaustive result for every job
+     * @throws IllegalStateException when the engine is closed or already executing a workflow
+     */
     public CompletableFuture<WorkflowResult> execute(WorkflowDefinition workflow) {
         Objects.requireNonNull(workflow, "workflow");
         if (closed.get()) {
@@ -211,6 +233,13 @@ public final class WorkflowEngine implements AutoCloseable {
         events.publish(event);
     }
 
+    /**
+     * Returns the current lifecycle state of a registered job in the active or latest workflow.
+     *
+     * @param jobId workflow-local job identity
+     * @return current job state
+     * @throws IllegalArgumentException when the job is unknown to this engine
+     */
     public JobState stateOf(JobId jobId) {
         var machine = states.get(jobId);
         if (machine == null) {
@@ -219,10 +248,12 @@ public final class WorkflowEngine implements AutoCloseable {
         return machine.state();
     }
 
+    /** Requests cooperative cancellation of the active workflow. */
     public void cancel() {
         cancellationRequested.set(true);
     }
 
+    /** Stops accepting work, requests cancellation, and shuts down virtual threads. */
     @Override
     public void close() {
         if (!closed.compareAndSet(false, true)) {

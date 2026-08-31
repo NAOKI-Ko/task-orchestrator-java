@@ -17,6 +17,12 @@ public final class WorkflowDefinition {
     private final Map<JobId, JobDefinition<?>> jobs;
     private final ExecutionPlan plan;
 
+    /**
+     * Validates job identities and dependencies, then builds a deterministic DAG plan.
+     *
+     * @param definitions complete set of workflow jobs
+     * @throws IllegalArgumentException for duplicate identities, unknown dependencies, or cycles
+     */
     public WorkflowDefinition(Collection<? extends JobDefinition<?>> definitions) {
         Objects.requireNonNull(definitions, "definitions");
         var mutable = new LinkedHashMap<JobId, JobDefinition<?>>();
@@ -29,10 +35,20 @@ public final class WorkflowDefinition {
         plan = buildPlan();
     }
 
+    /**
+     * Returns the immutable job registry.
+     *
+     * @return jobs keyed by workflow-local identity
+     */
     public Map<JobId, JobDefinition<?>> jobs() {
         return jobs;
     }
 
+    /**
+     * Returns the precomputed deterministic execution plan.
+     *
+     * @return topological order and parallel execution layers
+     */
     public ExecutionPlan plan() {
         return plan;
     }
@@ -96,12 +112,24 @@ public final class WorkflowDefinition {
                 List.copyOf(ordered), layers.stream().map(List::copyOf).toList());
     }
 
+    /**
+     * Immutable topological execution plan.
+     *
+     * @param ordered deterministic topological job order
+     * @param layers dependency-depth groups that may execute concurrently
+     */
     public record ExecutionPlan(List<JobId> ordered, List<List<JobId>> layers) {
+        /** Defensively copies the order and every execution layer. */
         public ExecutionPlan {
             ordered = List.copyOf(ordered);
             layers = layers.stream().map(List::copyOf).toList();
         }
 
+        /**
+         * Returns a deep immutable copy of dependency-depth layers.
+         *
+         * @return immutable outer and inner lists
+         */
         @Override
         public List<List<JobId>> layers() {
             return layers.stream().map(List::copyOf).toList();
