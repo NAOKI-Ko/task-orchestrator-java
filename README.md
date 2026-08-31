@@ -15,6 +15,18 @@ Batch and service code frequently mixes dependency ordering, futures, retry loop
 shutdown into business logic. This engine makes those decisions explicit through an immutable DAG,
 an exhaustive result algebra, typed events, and virtual-thread execution.
 
+## When to use it
+
+Use this library when one JVM must execute several jobs with explicit dependencies and you want
+deterministic DAG planning without hand-writing `CompletableFuture` gates. It fits bounded batch or
+service workflows that need retries, per-attempt timeouts, cooperative cancellation, concurrency
+limits, and dependency-failure propagation, but do not justify operating Temporal, Airflow, or
+another external workflow platform.
+
+Choose another solution when execution must survive process loss, span multiple services or days,
+pause for human approval, or provide an exactly-once guarantee. The built-in JSONL event store is
+an audit log, not a durable distributed scheduler.
+
 ## Features
 
 - deterministic priority-aware DAG planning, cycle detection and unknown-dependency validation
@@ -74,6 +86,65 @@ try (var engine = new WorkflowEngine(8, EventSink.noop(), Metrics.noop())) {
 }
 ```
 
+## Execution semantics
+
+| Concern | Behavior |
+| --- | --- |
+| Dependencies | Jobs are validated as an acyclic graph before execution. |
+| Parallel jobs | Ready jobs run on virtual threads; a fair semaphore bounds active job actions. |
+| Retry | Failed attempts use bounded exponential backoff and optional symmetric jitter. |
+| Timeout | Each attempt has its own timeout; a timeout cancels that attempt and follows retry policy. |
+| Cancellation | `cancel()` sets a cooperative signal exposed through `JobContext`. |
+| Dependency failure | Downstream actions are not invoked and receive a failure marked as dependency-caused. |
+| Events | A synchronous sealed event stream reports job and workflow lifecycle transitions. |
+| Persistence | `AppendOnlyEventStore` writes local newline-delimited JSON; it does not resume workflows. |
+| Shutdown | `close()` requests cancellation, waits for the configured deadline, then interrupts remaining work. |
+
+See the [practical usage guide](docs/usage-guide.md) for branching DAGs, failure propagation,
+retry/timeout configuration, concurrency details, and operational guidance.
+
+## Failure handling and parallel DAGs
+
+If `transform` fails after exhausting retries, a dependent `persist` action is skipped and its
+result is a `JobResult.Failure` with `dependencyFailure=true`. Independent branches are unaffected.
+
+```mermaid
+flowchart LR
+  Users[fetch-users] --> Aggregate[aggregate]
+  Orders[fetch-orders] --> Aggregate
+  Aggregate --> Publish[publish]
+```
+
+The graph has a deterministic plan, while `fetch-users` and `fetch-orders` may execute in parallel.
+The usage guide contains compile-checked examples for this graph and for retry/timeout behavior.
+
+## Concurrency model
+
+Virtual threads make each blocking job action inexpensive to represent; they do not impose a
+resource limit. The fair semaphore is the separate admission-control mechanism that limits active
+actions and serves waiting jobs in arrival order. Configure the limit around the downstream
+capacity you need to protect, not around the number of virtual threads the JVM can create.
+
+## Choosing an approach
+
+| Approach | Best fit |
+| --- | --- |
+| Raw `CompletableFuture` | A small, one-off graph where custom composition is more valuable than reusable policy. |
+| `task-orchestrator-java` | In-process, bounded DAGs needing typed results, retries, timeouts, events, and deterministic planning. |
+| External workflow platform | Durable, distributed, long-running, cross-service, or human-in-the-loop orchestration. |
+
+## API map
+
+| Area | Primary APIs |
+| --- | --- |
+| Workflow definition | `WorkflowDefinition`, `WorkflowDefinition.ExecutionPlan` |
+| Job definition | `JobDefinition<T>`, `JobId`, `JobAction<T>`, `JobContext` |
+| Execution | `WorkflowEngine`, `WorkflowResult`, `JobResult<T>`, `JobState` |
+| Resilience | `RetryPolicy`, `CircuitBreaker` |
+| Events | `WorkflowEvent`, `EventSink` |
+| Persistence | `EventStore`, `AppendOnlyEventStore` |
+| Metrics | `Metrics`, `InMemoryMetrics` |
+
 ## Examples
 
 Three examples compile against the library and run through Gradle:
@@ -85,6 +156,18 @@ Three examples compile against the library and run through Gradle:
 ```
 
 They demonstrate durable events, bounded retries, and virtual-thread parallelism.
+
+## Operational notes
+
+- Treat the JSONL event log as local append-only audit data; rotation, retention, and shipping are
+  application responsibilities.
+- Call `JobContext.throwIfCancelled()` at useful boundaries in long-running actions. Native or
+  external calls must still honor interruption or their own timeout.
+- Use try-with-resources for `WorkflowEngine`; closing requests cancellation and bounds shutdown.
+- Job exceptions become immutable result metadata. Inspect `WorkflowResult` instead of expecting
+  business failures as exceptional completion.
+- Event delivery is synchronous. Select sinks whose latency and failure behavior match the
+  workflow's reliability requirements.
 
 ## Design decisions
 
@@ -127,6 +210,10 @@ machine-specific and are intentionally not claimed in this README.
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Report vulnerabilities through
 the private process in [SECURITY.md](SECURITY.md). Maintainers should follow the reproducible
 [release process](docs/releasing.md).
+
+Generated public API documentation is available from the `javadocJar` artifact. The
+[architecture guide](docs/architecture.md) and [practical usage guide](docs/usage-guide.md) cover
+design and operation in more depth.
 
 ## License
 

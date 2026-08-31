@@ -5,6 +5,11 @@ versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Expanded practical usage, execution semantics, failure handling, concurrency, and operational
+  documentation.
+
 ## [0.1.0] - 2026-08-31
 
 ### Added
