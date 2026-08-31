@@ -58,14 +58,26 @@ class InfrastructureTest {
     void serializerCoversEverySealedEventVariant() {
         var id = new JobId("job");
         var now = Instant.EPOCH;
+        assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.WorkflowStarted(1, now)))
+                .contains("jobCount");
         assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.JobCompleted(id, 1, Duration.ZERO, now)))
                 .contains("JobCompleted");
         assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.JobFailed(id, "IO", "bad", now)))
                 .contains("errorType");
         assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.JobRetried(id, 2, Duration.ZERO, now)))
                 .contains("nextAttempt");
+        assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.JobTimedOut(
+                        id, 1, Duration.ofSeconds(1), now)))
+                .contains("attempt");
+        assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.JobDependencyFailed(
+                        id, new JobId("dependency"), now)))
+                .contains("dependencyId");
+        assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.JobCancelled(id, now)))
+                .contains("JobCancelled");
         assertThat(AppendOnlyEventStore.serialize(new WorkflowEvent.WorkflowFailed(2, Duration.ZERO, now)))
                 .contains("failedJobs");
+        assertThatThrownBy(() -> new WorkflowEvent.WorkflowStarted(-1, now))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

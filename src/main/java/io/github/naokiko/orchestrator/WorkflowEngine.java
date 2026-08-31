@@ -83,6 +83,7 @@ public final class WorkflowEngine implements AutoCloseable {
         workflow.jobs().keySet().forEach(id -> states.put(id, new JobStateMachine()));
         var started = System.nanoTime();
         var futures = new LinkedHashMap<JobId, CompletableFuture<JobResult<?>>>();
+        emit(new WorkflowEvent.WorkflowStarted(workflow.jobs().size(), Instant.now()));
 
         for (var id : workflow.plan().ordered()) {
             var definition = workflow.jobs().get(id);
@@ -129,6 +130,7 @@ public final class WorkflowEngine implements AutoCloseable {
         }
         states.get(definition.id()).transition(JobState.SKIPPED);
         var error = new IllegalStateException("dependency failed: " + failed.get().jobId());
+        emit(new WorkflowEvent.JobDependencyFailed(definition.id(), failed.get().jobId(), Instant.now()));
         emit(new WorkflowEvent.JobFailed(
                 definition.id(), error.getClass().getSimpleName(), error.getMessage(), Instant.now()));
         return Optional.of(new JobResult.Failure<>(
@@ -141,6 +143,7 @@ public final class WorkflowEngine implements AutoCloseable {
         var started = System.nanoTime();
         if (cancellationRequested.get()) {
             machine.transition(JobState.CANCELLED);
+            emit(new WorkflowEvent.JobCancelled(definition.id(), Instant.now()));
             return new JobResult.Cancelled<>(definition.id(), "cancelled before execution", Duration.ZERO);
         }
 
@@ -162,10 +165,15 @@ public final class WorkflowEngine implements AutoCloseable {
                 return new JobResult.Success<>(definition.id(), value, duration, attempt);
             } catch (CancellationException error) {
                 machine.transition(JobState.CANCELLED);
+                emit(new WorkflowEvent.JobCancelled(definition.id(), Instant.now()));
                 return new JobResult.Cancelled<>(
                         definition.id(), error.getMessage(), Duration.ofNanos(System.nanoTime() - started));
             } catch (Exception error) {
                 lastFailure = error;
+                if (error instanceof TimeoutException) {
+                    emit(new WorkflowEvent.JobTimedOut(
+                            definition.id(), attempt, definition.timeout(), Instant.now()));
+                }
                 if (attempt < definition.retryPolicy().maxAttempts()) {
                     machine.transition(JobState.RETRYING);
                     var delay = definition.retryPolicy().delayFor(attempt, ThreadLocalRandom.current().nextDouble());
@@ -177,6 +185,7 @@ public final class WorkflowEngine implements AutoCloseable {
                         Thread.currentThread().interrupt();
                         cancellationRequested.set(true);
                         machine.transition(JobState.CANCELLED);
+                        emit(new WorkflowEvent.JobCancelled(definition.id(), Instant.now()));
                         return new JobResult.Cancelled<>(
                                 definition.id(), "retry interrupted", Duration.ofNanos(System.nanoTime() - started));
                     }

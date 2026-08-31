@@ -12,6 +12,8 @@ versioning.
 - Fluent, typed workflow and job builder APIs with immutable reusable build snapshots.
 - Composable event sinks, retry policy factories, execution summaries, and non-throwing workflow
   validation.
+- Optional OpenTelemetry workflow/job spans, lifecycle events, stable attributes, and semantic
+  counter/duration metrics through the existing observability ports.
 
 ## [0.1.0] - 2026-08-31
 

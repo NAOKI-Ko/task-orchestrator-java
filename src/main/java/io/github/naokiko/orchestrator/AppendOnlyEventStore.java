@@ -58,6 +58,7 @@ public final class AppendOnlyEventStore implements EventStore {
 
     static String serialize(WorkflowEvent event) {
         var details = switch (event) {
+            case WorkflowEvent.WorkflowStarted started -> "\"jobCount\":" + started.jobCount();
             case WorkflowEvent.JobStarted started -> "\"jobId\":\"" + escape(started.jobId().value())
                     + "\",\"attempt\":" + started.attempt();
             case WorkflowEvent.JobCompleted completed -> "\"jobId\":\"" + escape(completed.jobId().value())
@@ -66,6 +67,12 @@ public final class AppendOnlyEventStore implements EventStore {
                     + "\",\"errorType\":\"" + escape(failed.errorType()) + "\"";
             case WorkflowEvent.JobRetried retried -> "\"jobId\":\"" + escape(retried.jobId().value())
                     + "\",\"nextAttempt\":" + retried.nextAttempt();
+            case WorkflowEvent.JobTimedOut timedOut -> "\"jobId\":\"" + escape(timedOut.jobId().value())
+                    + "\",\"attempt\":" + timedOut.attempt();
+            case WorkflowEvent.JobDependencyFailed failed -> "\"jobId\":\"" + escape(failed.jobId().value())
+                    + "\",\"dependencyId\":\"" + escape(failed.dependencyId().value()) + "\"";
+            case WorkflowEvent.JobCancelled cancelled -> "\"jobId\":\""
+                    + escape(cancelled.jobId().value()) + "\"";
             case WorkflowEvent.WorkflowCompleted completed -> "\"jobCount\":" + completed.jobCount();
             case WorkflowEvent.WorkflowFailed failed -> "\"failedJobs\":" + failed.failedJobs();
         };

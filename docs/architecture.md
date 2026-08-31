@@ -16,12 +16,13 @@ sequenceDiagram
   A->>D: jobs + dependencies
   D->>D: validate and topologically plan
   A->>E: execute(definition)
+  E->>S: WorkflowStarted
   E->>V: dependency-gated futures
   loop each attempt
-    V->>S: JobStarted / JobRetried
+    V->>S: JobStarted / JobRetried / JobTimedOut
     V->>V: semaphore + timeout
   end
-  V->>S: JobCompleted / JobFailed
+  V->>S: JobCompleted / JobFailed / JobCancelled
   E->>S: WorkflowCompleted / WorkflowFailed
   E-->>A: CompletableFuture<WorkflowResult>
 ```
@@ -36,6 +37,8 @@ sequenceDiagram
 - `AppendOnlyEventStore` persists newline-delimited events behind `EventStore`.
 - `RetryPolicy` and `CircuitBreaker` isolate resilience math and state.
 - `Metrics` separates instrumentation from any monitoring vendor.
+- `OrchestratorTelemetry` adapts those event and metrics ports to the OpenTelemetry API; SDK and
+  exporter lifecycle remain in the hosting application.
 
 ## Data flow
 
@@ -75,4 +78,3 @@ job latency. The built-in log is local and not a distributed coordinator. Virtua
 blocking integrations, but users must still ensure native calls respond to interruption. A single
 engine runs one workflow at a time to keep cancellation and observable state unambiguous; create
 separate engines for independent workflows.
-

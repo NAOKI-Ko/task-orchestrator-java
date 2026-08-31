@@ -35,9 +35,9 @@ an audit log, not a durable distributed scheduler.
 - explicit job state machine, cancellation, timeouts and graceful shutdown
 - bounded exponential retry with jitter and a reusable circuit breaker
 - failure propagation that skips unsafe downstream jobs
-- sealed `JobStarted`, `JobCompleted`, `JobFailed`, `JobRetried`, `WorkflowCompleted`, and
-  `WorkflowFailed` events
+- sealed workflow, attempt, retry, timeout, dependency-failure, cancellation, and completion events
 - replaceable event sink, append-only JSONL persistence, structured system logging, and metrics port
+- optional OpenTelemetry child spans and semantic counter/duration adapter without an SDK dependency
 - JUnit 5, AssertJ, jqwik, JaCoCo, Checkstyle, SpotBugs and JMH quality tooling
 
 ## Architecture
@@ -108,6 +108,26 @@ same immutable `WorkflowDefinition` accepted by the constructor-based API.
 See the [practical usage guide](docs/usage-guide.md) for branching DAGs, failure propagation,
 retry/timeout configuration, concurrency details, and operational guidance.
 
+## OpenTelemetry
+
+Connect a configured OpenTelemetry API through the existing event and metrics ports:
+
+```java
+try (var telemetry = OrchestratorTelemetry.create(openTelemetry);
+        var engine = new WorkflowEngine(8, telemetry.eventSink(), telemetry.metrics())) {
+    WorkflowResult result = engine.execute(workflow).join();
+}
+```
+
+Each execution emits a `workflow.execute` root span with `workflow.job` children, including correct
+parents across virtual threads. Retry, timeout, exception, dependency-failure, and cancellation
+events enrich job spans. Existing counters are exported through `task.orchestrator.job.events`, and
+nanosecond timings become a `task.orchestrator.job.duration` histogram in seconds. The adapter never
+automatically exports job payloads, return values, exception messages, or stack traces.
+
+See [docs/observability.md](docs/observability.md) for SDK ownership, stable attributes, metric units,
+privacy, exporter responsibilities, and the complete setup.
+
 ## Failure handling and parallel DAGs
 
 If `transform` fails after exhausting retries, a dependent `persist` action is skipped and its
@@ -148,11 +168,12 @@ capacity you need to protect, not around the number of virtual threads the JVM c
 | Resilience | `RetryPolicies`, `RetryPolicy`, `CircuitBreaker`, `WorkflowValidator` |
 | Events | `WorkflowEvent`, `EventSink`, `EventSinks`, `CompositeEventSink`, `FilteringEventSink` |
 | Persistence | `EventStore`, `AppendOnlyEventStore` |
+| Observability | `OrchestratorTelemetry`, `OpenTelemetryEventSink`, `OpenTelemetryMetrics`, `TelemetryAttributes` |
 | Metrics | `Metrics`, `InMemoryMetrics` |
 
 ## Examples
 
-Five examples compile against the library and run through Gradle:
+Six examples compile against the library and run through Gradle:
 
 ```bash
 ./gradlew runBasicExample
@@ -160,10 +181,12 @@ Five examples compile against the library and run through Gradle:
 ./gradlew runConcurrencyExample
 ./gradlew runBuilderExample
 ./gradlew runUtilitiesExample
+./gradlew runOpenTelemetryExample
 ```
 
 They demonstrate durable events, bounded retries, virtual-thread parallelism, and fluent workflow
-construction, plus composable sinks, retry factories, validation, and execution summaries.
+construction, plus composable sinks, retry factories, validation, execution summaries, and optional
+OpenTelemetry wiring.
 
 ## Operational notes
 
@@ -210,7 +233,6 @@ machine-specific and are intentionally not claimed in this README.
 
 - resumable workflows reconstructed from persisted events
 - distributed execution and leader coordination
-- OpenTelemetry spans and metrics adapter
 - configurable durable queue backends
 
 ## Contributing
