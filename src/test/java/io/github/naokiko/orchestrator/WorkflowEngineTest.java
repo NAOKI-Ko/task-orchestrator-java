@@ -146,6 +146,14 @@ class WorkflowEngineTest {
     void engineRejectsInvalidUsageAndIsIdempotentlyCloseable() throws Exception {
         assertThatThrownBy(() -> new WorkflowEngine(0, EventSink.noop(), Metrics.noop()))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() ->
+                        new WorkflowEngine(1, EventSink.noop(), Metrics.noop(), Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("shutdown timeout");
+        assertThatThrownBy(() -> new WorkflowEngine(
+                        1, EventSink.noop(), Metrics.noop(), Duration.ofNanos(-1)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("shutdown timeout");
         var entered = new CountDownLatch(1);
         var release = new CountDownLatch(1);
         var job = JobDefinition.of(new JobId("blocked"), ignored -> {
