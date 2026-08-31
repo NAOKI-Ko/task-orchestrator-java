@@ -14,6 +14,11 @@ public final class AppendOnlyEventStore implements EventStore {
     private final Path path;
     private final ReentrantLock lock = new ReentrantLock();
 
+    /**
+     * Creates a store that appends UTF-8 JSON records to the supplied path.
+     *
+     * @param path event-log file; parent directories are created on first write
+     */
     public AppendOnlyEventStore(Path path) {
         this.path = Objects.requireNonNull(path, "path");
     }
@@ -72,4 +77,3 @@ public final class AppendOnlyEventStore implements EventStore {
         return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     }
 }
-

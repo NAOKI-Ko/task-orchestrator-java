@@ -7,9 +7,13 @@ import java.util.function.LongSupplier;
 
 /** Per-job closed/open/half-open circuit breaker. */
 public final class CircuitBreaker {
+    /** Circuit availability derived from failure history and elapsed recovery time. */
     public enum State {
+        /** Calls are admitted normally. */
         CLOSED,
+        /** Calls are rejected until the recovery timeout elapses. */
         OPEN,
+        /** The recovery timeout elapsed and a trial call may proceed. */
         HALF_OPEN
     }
 
@@ -19,6 +23,12 @@ public final class CircuitBreaker {
     private int failures;
     private long openedAt = Long.MIN_VALUE;
 
+    /**
+     * Creates a circuit breaker using {@link System#nanoTime()} as its monotonic clock.
+     *
+     * @param failureThreshold consecutive failures required to open the circuit
+     * @param recoveryTimeout duration before an open circuit becomes half-open
+     */
     public CircuitBreaker(int failureThreshold, Duration recoveryTimeout) {
         this(failureThreshold, recoveryTimeout, System::nanoTime);
     }
@@ -32,6 +42,11 @@ public final class CircuitBreaker {
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
+    /**
+     * Returns the availability state at the current monotonic time.
+     *
+     * @return closed, open, or half-open state
+     */
     public synchronized State state() {
         if (openedAt == Long.MIN_VALUE) {
             return State.CLOSED;
@@ -39,6 +54,15 @@ public final class CircuitBreaker {
         return nanoTime.getAsLong() - openedAt >= recoveryNanos ? State.HALF_OPEN : State.OPEN;
     }
 
+    /**
+     * Executes an operation when the circuit admits calls and updates failure history.
+     *
+     * @param operation operation guarded by the circuit
+     * @param <T> operation result type
+     * @return operation result
+     * @throws CircuitOpenException when the circuit is open
+     * @throws Exception when the operation fails
+     */
     public <T> T execute(Callable<T> operation) throws Exception {
         Objects.requireNonNull(operation, "operation");
         synchronized (this) {
@@ -64,6 +88,7 @@ public final class CircuitBreaker {
         }
     }
 
+    /** Indicates that a guarded operation was rejected because the circuit is open. */
     public static final class CircuitOpenException extends IllegalStateException {
         private static final long serialVersionUID = 1L;
 
@@ -72,4 +97,3 @@ public final class CircuitBreaker {
         }
     }
 }
-

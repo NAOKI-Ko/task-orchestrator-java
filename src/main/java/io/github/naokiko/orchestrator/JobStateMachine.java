@@ -18,10 +18,24 @@ public final class JobStateMachine {
 
     private final AtomicReference<JobState> state = new AtomicReference<>(JobState.PENDING);
 
+    /** Creates a state machine in {@link JobState#PENDING}. */
+    public JobStateMachine() { }
+
+    /**
+     * Returns the current lifecycle state.
+     *
+     * @return current state
+     */
     public JobState state() {
         return state.get();
     }
 
+    /**
+     * Atomically advances to a permitted target state.
+     *
+     * @param target desired next state
+     * @throws IllegalStateException when the transition is not permitted
+     */
     public void transition(JobState target) {
         while (true) {
             var current = state.get();
@@ -34,4 +48,3 @@ public final class JobStateMachine {
         }
     }
 }
-
