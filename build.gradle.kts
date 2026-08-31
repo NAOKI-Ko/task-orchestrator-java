@@ -27,7 +27,7 @@ val openTelemetryVersion = "1.65.0"
 
 dependencies {
     api("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
-    testImplementation(platform("org.junit:junit-bom:5.13.4"))
+    testImplementation(platform("org.junit:junit-bom:6.1.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core:3.27.4")
     testImplementation("net.jqwik:jqwik:1.9.3")
