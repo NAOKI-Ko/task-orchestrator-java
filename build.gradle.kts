@@ -109,6 +109,7 @@ fun registerExample(taskName: String, className: String) {
 registerExample("runBasicExample", "io.github.naokiko.orchestrator.examples.BasicExample")
 registerExample("runRetryExample", "io.github.naokiko.orchestrator.examples.RetryExample")
 registerExample("runConcurrencyExample", "io.github.naokiko.orchestrator.examples.ConcurrencyExample")
+registerExample("runBuilderExample", "io.github.naokiko.orchestrator.examples.BuilderExample")
 
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)

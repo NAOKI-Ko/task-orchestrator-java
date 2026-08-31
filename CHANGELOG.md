@@ -9,6 +9,7 @@ versioning.
 
 - Expanded practical usage, execution semantics, failure handling, concurrency, and operational
   documentation.
+- Fluent, typed workflow and job builder APIs with immutable reusable build snapshots.
 
 ## [0.1.0] - 2026-08-31
 
