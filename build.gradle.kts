@@ -1,3 +1,5 @@
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
+
 plugins {
     `java-library`
     jacoco
@@ -32,6 +34,11 @@ dependencies {
 tasks.withType<JavaCompile>().configureEach {
     options.release = 25
     options.compilerArgs.addAll(listOf("-Xlint:all", "-Werror"))
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Javadoc>().configureEach {
+    (options as StandardJavadocDocletOptions).addBooleanOption("Werror", true)
     options.encoding = "UTF-8"
 }
 
