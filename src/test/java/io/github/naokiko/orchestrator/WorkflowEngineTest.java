@@ -42,6 +42,7 @@ class WorkflowEngineTest {
             assertThat(engine.stateOf(root.id())).isEqualTo(JobState.SUCCEEDED);
             assertThat(metrics.count("job.completed", child.id())).isOne();
             assertThat(metrics.timings("job.duration", root.id())).hasSize(1);
+            assertThat(events).anyMatch(WorkflowEvent.WorkflowStarted.class::isInstance);
             assertThat(events).anyMatch(WorkflowEvent.WorkflowCompleted.class::isInstance);
         }
     }
@@ -92,13 +93,16 @@ class WorkflowEngineTest {
                 Duration.ofSeconds(1),
                 RetryPolicy.none(),
                 ignored -> "unsafe");
-        try (var engine = new WorkflowEngine(2, EventSink.noop(), Metrics.noop())) {
+        var events = new CopyOnWriteArrayList<WorkflowEvent>();
+        try (var engine = new WorkflowEngine(2, events::add, Metrics.noop())) {
             var result = engine.execute(new WorkflowDefinition(List.of(timeout, dependent))).join();
             assertThat(result.succeeded()).isFalse();
             assertThat(result.failedJobs()).isEqualTo(2);
             assertThat(result.jobs().get(timeoutId)).isInstanceOf(JobResult.Failure.class);
             assertThat(((JobResult.Failure<?>) result.jobs().get(dependentId)).dependencyFailure()).isTrue();
             assertThat(engine.stateOf(dependentId)).isEqualTo(JobState.SKIPPED);
+            assertThat(events).anyMatch(WorkflowEvent.JobTimedOut.class::isInstance);
+            assertThat(events).anyMatch(WorkflowEvent.JobDependencyFailed.class::isInstance);
         }
     }
 
@@ -132,13 +136,15 @@ class WorkflowEngineTest {
                 Thread.sleep(Duration.ofMillis(1));
             }
         });
-        try (var engine = new WorkflowEngine(1, EventSink.noop(), Metrics.noop())) {
+        var events = new CopyOnWriteArrayList<WorkflowEvent>();
+        try (var engine = new WorkflowEngine(1, events::add, Metrics.noop())) {
             var future = engine.execute(new WorkflowDefinition(List.of(job)));
             assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();
             engine.cancel();
             var result = future.join();
             assertThat(result.jobs().get(id)).isInstanceOf(JobResult.Cancelled.class);
             assertThat(engine.stateOf(id)).isEqualTo(JobState.CANCELLED);
+            assertThat(events).anyMatch(WorkflowEvent.JobCancelled.class::isInstance);
         }
     }
 

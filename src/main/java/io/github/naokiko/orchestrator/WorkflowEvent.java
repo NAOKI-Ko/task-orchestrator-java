@@ -6,10 +6,14 @@ import java.util.Objects;
 
 /** Closed, type-safe event hierarchy. */
 public sealed interface WorkflowEvent
-        permits WorkflowEvent.JobStarted,
+        permits WorkflowEvent.WorkflowStarted,
+                WorkflowEvent.JobStarted,
                 WorkflowEvent.JobCompleted,
                 WorkflowEvent.JobFailed,
                 WorkflowEvent.JobRetried,
+                WorkflowEvent.JobTimedOut,
+                WorkflowEvent.JobDependencyFailed,
+                WorkflowEvent.JobCancelled,
                 WorkflowEvent.WorkflowCompleted,
                 WorkflowEvent.WorkflowFailed {
     /**
@@ -18,6 +22,22 @@ public sealed interface WorkflowEvent
      * @return event occurrence time
      */
     Instant occurredAt();
+
+    /**
+     * Signals the start of an entire workflow.
+     *
+     * @param jobCount number of jobs registered in the workflow
+     * @param occurredAt event occurrence time
+     */
+    record WorkflowStarted(int jobCount, Instant occurredAt) implements WorkflowEvent {
+        /** Validates the job count and occurrence time. */
+        public WorkflowStarted {
+            if (jobCount < 0) {
+                throw new IllegalArgumentException("jobCount must not be negative");
+            }
+            Objects.requireNonNull(occurredAt, "occurredAt");
+        }
+    }
 
     /**
      * Signals the start of a job attempt.
@@ -82,6 +102,53 @@ public sealed interface WorkflowEvent
         public JobRetried {
             Objects.requireNonNull(jobId, "jobId");
             Objects.requireNonNull(delay, "delay");
+            Objects.requireNonNull(occurredAt, "occurredAt");
+        }
+    }
+
+    /**
+     * Signals that a job attempt exceeded its configured timeout.
+     *
+     * @param jobId timed-out job identity
+     * @param attempt one-based attempt number
+     * @param timeout configured timeout for the attempt
+     * @param occurredAt event occurrence time
+     */
+    record JobTimedOut(JobId jobId, int attempt, Duration timeout, Instant occurredAt) implements WorkflowEvent {
+        /** Validates the event identity, timeout, and occurrence time. */
+        public JobTimedOut {
+            Objects.requireNonNull(jobId, "jobId");
+            Objects.requireNonNull(timeout, "timeout");
+            Objects.requireNonNull(occurredAt, "occurredAt");
+        }
+    }
+
+    /**
+     * Signals that a job was skipped because one of its dependencies was unsuccessful.
+     *
+     * @param jobId skipped job identity
+     * @param dependencyId unsuccessful dependency identity
+     * @param occurredAt event occurrence time
+     */
+    record JobDependencyFailed(JobId jobId, JobId dependencyId, Instant occurredAt) implements WorkflowEvent {
+        /** Validates both identities and the occurrence time. */
+        public JobDependencyFailed {
+            Objects.requireNonNull(jobId, "jobId");
+            Objects.requireNonNull(dependencyId, "dependencyId");
+            Objects.requireNonNull(occurredAt, "occurredAt");
+        }
+    }
+
+    /**
+     * Signals cancellation of a job before successful completion.
+     *
+     * @param jobId cancelled job identity
+     * @param occurredAt event occurrence time
+     */
+    record JobCancelled(JobId jobId, Instant occurredAt) implements WorkflowEvent {
+        /** Validates the event identity and occurrence time. */
+        public JobCancelled {
+            Objects.requireNonNull(jobId, "jobId");
             Objects.requireNonNull(occurredAt, "occurredAt");
         }
     }
