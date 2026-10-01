@@ -4,7 +4,7 @@ plugins {
     `java-library`
     jacoco
     checkstyle
-    id("com.github.spotbugs") version "6.5.11"
+    id("com.github.spotbugs") version "6.5.12"
     id("me.champeau.jmh") version "0.7.3"
 }
 
