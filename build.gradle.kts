@@ -23,7 +23,7 @@ java {
     withJavadocJar()
 }
 
-val openTelemetryVersion = "1.65.0"
+val openTelemetryVersion = "1.66.0"
 
 dependencies {
     api("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
